@@ -31,9 +31,17 @@ function fromMinutes(value) {
 }
 
 function expectPlan(jobs, expected) {
-  const result = calculateBreaks(jobs);
+  const result = calculateBreaks(jobs, 10);
   assert.deepEqual(summary(result), expected);
 }
+
+test('最短時間の初期値は30分で、10〜40分を5分刻みで変更できる', () => {
+  const cases = [job('09:00', '10:00'), job('10:40', '11:00')];
+  assert.equal(calculateBreaks(cases).totalMinutes, 30);
+  assert.equal(calculateBreaks(cases, 35).totalMinutes, 0);
+  assert.equal(calculateBreaks(cases, 10).totalMinutes, 30);
+  for (const value of [5, 12, 45]) assert.throws(() => calculateBreaks(cases, value), RangeError);
+});
 
 test('基本例では候補区間を両方使い、合計160分になる', () => {
   expectPlan(

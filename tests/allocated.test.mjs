@@ -9,9 +9,10 @@ const minute = (time) => {
 const jobs = (...ranges) => ranges.map(([start, end], index) => ({ id: String(index + 1), start: minute(start), end: minute(end) }));
 const shown = (result) => result.breaks.map((item) => [item.start, item.end, item.duration]);
 
-test('案件がない日は実際の休憩時間を表示しない', () => {
+test('案件がない日は拘束時間を算出しない', () => {
   const result = calculateAllocatedBreaks([]);
   assert.equal(result.status, 'empty');
+  assert.equal(result.confinementMinutes, null);
   assert.equal(result.actualMinutes, null);
 });
 
@@ -34,6 +35,27 @@ test('拘束8時間5分で実際5分なら最短10分を満たせない', () => 
   assert.equal(result.status, 'impossible');
 });
 
+test('09:00開始・18:00終了の拘束時間は9時間5分', () => {
+  const result = calculateAllocatedBreaks(jobs(['09:00', '18:00']));
+  assert.equal(result.confinementMinutes, 545);
+  assert.equal(result.actualMinutes, 65);
+});
+
+test('最短時間の初期値30分では成立せず、10分なら成立する', () => {
+  const ranges = jobs(['09:00', '10:00'], ['10:20', '14:25'], ['16:35', '18:00']);
+  assert.equal(calculateAllocatedBreaks(ranges).status, 'impossible');
+  const ten = calculateAllocatedBreaks(ranges, 10);
+  assert.equal(ten.status, 'valid');
+  assert.equal(ten.breaks[0].duration, 10);
+  assert.equal(ten.totalMinutes, ten.actualMinutes);
+});
+
+test('30分と40分では早い休憩の配分が変わる', () => {
+  const ranges = jobs(['09:00', '10:00'], ['11:00', '12:00'], ['14:00', '19:00']);
+  assert.equal(calculateAllocatedBreaks(ranges, 30).breaks[0].duration, 30);
+  assert.equal(calculateAllocatedBreaks(ranges, 40).breaks[0].duration, 40);
+});
+
 test('実際65分を後ろの候補にまとめ、開始をできるだけ遅くする', () => {
   const result = calculateAllocatedBreaks(jobs(['09:00', '10:00'], ['11:00', '12:00'], ['14:00', '18:00']));
   assert.equal(result.status, 'valid');
@@ -43,7 +65,7 @@ test('実際65分を後ろの候補にまとめ、開始をできるだけ遅く
 });
 
 test('後ろの候補が足りない分だけ早い候補から取る', () => {
-  const result = calculateAllocatedBreaks(jobs(['09:00', '10:00'], ['11:00', '12:00'], ['14:00', '19:00']));
+  const result = calculateAllocatedBreaks(jobs(['09:00', '10:00'], ['11:00', '12:00'], ['14:00', '19:00']), 10);
   assert.equal(result.actualMinutes, 125);
   assert.equal(result.status, 'valid');
   assert.deepEqual(shown(result), [
@@ -53,7 +75,7 @@ test('後ろの候補が足りない分だけ早い候補から取る', () => {
 });
 
 test('後ろの候補だけでは初回5時間条件に届かず、早い10分を確保する', () => {
-  const result = calculateAllocatedBreaks(jobs(['09:00', '10:00'], ['10:20', '14:25'], ['16:35', '18:00']));
+  const result = calculateAllocatedBreaks(jobs(['09:00', '10:00'], ['10:20', '14:25'], ['16:35', '18:00']), 10);
   assert.equal(result.actualMinutes, 65);
   assert.equal(result.status, 'valid');
   assert.deepEqual(shown(result), [
