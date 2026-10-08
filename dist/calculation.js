@@ -155,7 +155,8 @@ export function calculateAllocatedBreaks(jobs, minBreakMinutes = 30) {
   const maximum = calculateBreaks(ordered, minBreakMinutes);
   const maxAvailableMinutes = maximum.status === 'valid' ? maximum.totalMinutes : null;
   const base = { confinementMinutes, actualMinutes, maxAvailableMinutes, errors: [] };
-  const impossible = () => ({ status: 'impossible', breaks: [], count: 0, totalMinutes: 0, ...base });
+  const impossible = () => ({ status: 'impossible', breaks: [], count: 0, totalMinutes: 0, ...base,
+    reasons: diagnoseImpossible(ordered, actualMinutes, minBreakMinutes) });
 
   if (actualMinutes === 0) {
     if (lastEnd - firstStart < 300) {
@@ -243,4 +244,50 @@ export function calculateAllocatedBreaks(jobs, minBreakMinutes = 30) {
   const plan = solve(-1, totalSlots, 3);
   if (!plan) return impossible();
   return { status: 'valid', breaks: plan.breaks, count: plan.count, totalMinutes: actualMinutes, ...base };
+}
+
+// Only report constraints that can be proved from this day's intervals.
+// Capacity checks deliberately ignore spacing, so they cannot mislabel a
+// spacing failure as a shortage of available minutes or a three-break limit.
+function diagnoseImpossible(jobs, total, minimum) {
+  const reasons = [];
+  const add = (code, message) => reasons.push({ code, message });
+  const gaps = jobs.slice(1).map((job, index) => ({ start: jobs[index].end + 5, end: job.start - 5 }))
+    .filter((gap) => gap.end - gap.start >= minimum);
+  if (total === 0) {
+    add('zero-total', '必要な休憩合計は0分ですが、案件が5時間以上にわたるため、0回では5時間以内に最初の休憩を取る条件を満たせません。');
+  } else if (total < minimum) {
+    add('below-minimum', `必要な休憩合計${total}分が、設定した1回の最短時間${minimum}分より短いため、合計を一致させられません。`);
+  }
+  if (!gaps.length) {
+    add('no-gap', `案件の前後5分を除くと、最短${minimum}分以上の休憩を置けるスキマがありません。`);
+  } else {
+    if (!gaps.some((gap) => gap.start <= jobs[0].start + 300)) {
+      add('first-deadline', `最短${minimum}分の休憩を置けるスキマが、最初の案件開始から5時間以内にありません。`);
+    }
+    if (total >= minimum) {
+      const capacities = gaps.map((gap) => gap.end - gap.start).sort((a, b) => b - a);
+      const all = capacities.reduce((sum, value) => sum + value, 0);
+      const three = capacities.slice(0, 3).reduce((sum, value) => sum + value, 0);
+      if (total > all) {
+        add('insufficient-capacity', `最短${minimum}分以上のスキマをすべて使っても${all}分で、必要な休憩合計${total}分に届きません。`);
+      } else if (total > three) {
+        add('three-break-limit', `長い順に3つのスキマを使っても${three}分で、必要な休憩合計${total}分を3回以内に割り振れません。`);
+      } else {
+        // For k intervals, possible totals form [k * minimum, sum of the
+        // k largest capacities]. All values are on the five-minute grid.
+        let capacity = 0;
+        let exact = false;
+        for (let count = 1; count <= Math.min(3, capacities.length); count += 1) {
+          capacity += capacities[count - 1];
+          if (total >= count * minimum && total <= capacity) exact = true;
+        }
+        if (!exact) add('exact-total', `必要な休憩合計${total}分を、各回${minimum}分以上・3回以内でスキマにちょうど割り振れません。複数回に分けると各回の最短時間を満たせません。`);
+      }
+    }
+  }
+  if (!reasons.length) {
+    add('spacing-allocation', `必要な休憩合計${total}分を各回${minimum}分以上・3回以内で割り振ると、最初の休憩まで、または休憩どうしの間を5時間以内にする条件を同時に満たせません。`);
+  }
+  return reasons;
 }

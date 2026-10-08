@@ -29,7 +29,10 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .compact-summary { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px 15px; padding: 10px 13px; background: #f8fbf7; border-bottom: 1px solid #dfe9df; color: #284a37; }
 .summary-stat { display: grid; gap: 2px; font-size: 11px; color: #667b69; font-weight: 800; }
 .summary-stat strong { color: #284a37; font-size: 18px; line-height: 1.2; }
-.summary-plan { color: #28533a; font-size: 12px; font-weight: 850; }
+.summary-plan { display: grid; gap: 3px; color: #28533a; font-size: 12px; font-weight: 850; }
+.summary-plan strong { color: #183e29; font-size: 19px; line-height: 1.25; font-weight: 900; }
+.summary-reasons { grid-column: 1 / -1; margin: 0; padding-left: 19px; color: #793521; font-size: 13px; font-weight: 700; line-height: 1.65; }
+.summary-reasons li + li { margin-top: 5px; }
 .compact-summary.invalid, .compact-summary.impossible { background: #fff7f3; color: #9a4634; }
 .compact-summary.invalid .summary-plan, .compact-summary.impossible .summary-plan { color: #9a4634; }
 .outside-notice { margin: 10px 12px 0; padding: 10px 12px; border: 1px solid #e8c891; border-radius: 9px; background: #fff8e8; color: #785926; font-size: 12px; font-weight: 750; line-height: 1.5; }
@@ -121,8 +124,6 @@ dialog::backdrop { background: #172c20a1; }
 .time-field input { width: 100%; min-height: 42px; border: 1px solid #d5e3d7; border-radius: 8px; padding: 0 5px; background: #fff; color: #243e2d; font-size: 15px; font-weight: 850; font-variant-numeric: tabular-nums; }
 .time-field input[aria-invalid="true"] { border-color: #c96049; }
 .time-separator { padding-bottom: 12px; color: #8fa493; }
-.job-card-actions { display: flex; gap: 8px; margin-top: 9px; }
-.edit-on-axis { min-height: 37px; padding: 0 12px; border: 1px solid #b9d8c1; border-radius: 8px; background: #ecf6ee; color: #276344; font-size: 12px; font-weight: 850; }
 .job-note { margin: 8px 0 0; color: #8c5a2c; font-size: 11px; font-weight: 750; line-height: 1.5; }
 .job-note.error { color: #a34d39; }
 .sheet-empty { padding: 25px 12px; border: 1px dashed #d2dfd1; border-radius: 10px; color: #748575; font-size: 13px; text-align: center; }
@@ -130,11 +131,8 @@ dialog::backdrop { background: #172c20a1; }
 .confirm-dialog { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: min(calc(100% - 32px), 420px); max-width: none; margin: 0; padding: 22px; border-radius: 16px; box-shadow: 0 15px 50px #172b2155; }
 .confirm-dialog h2 { font-size: 18px; margin: 0; }
 .confirm-dialog p { color: #637567; font-size: 13px; line-height: 1.65; margin: 11px 0 19px; }
-.confirm-actions { display: flex; gap: 9px; }
-.confirm-actions button { flex: 1; min-height: 43px; border-radius: 9px; font-size: 13px; font-weight: 850; }
-#cancelResetButton { border: 1px solid #dce7dc; background: #f8fbf8; color: #355540; }
-#confirmResetButton { border: 1px solid #a64736; background: #a64736; color: #fff; }
 .settings-dialog .sheet-heading { align-items: center; }
+.settings-dialog .sheet-date { margin-top: 16px; }
 .setting-field { display: block; margin: 16px 0 7px; color: #3a5743; font-size: 13px; font-weight: 850; }
 .settings-dialog select { width: 100%; min-height: 46px; padding: 0 11px; border: 1px solid #cdded0; border-radius: 9px; background: #fff; color: #244832; font-size: 16px; font-weight: 850; }
 @media (min-width: 760px) { .app-shell { padding: 20px 18px 45px; } .planner { border: 1px solid #e4ebe2; border-radius: 16px; overflow: clip; } .control-strip { border-radius: 16px 16px 0 0; } }

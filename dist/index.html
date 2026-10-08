@@ -47,13 +47,13 @@
   <dialog id="jobsSheet" class="bottom-sheet" aria-labelledby="sheetTitle">
     <div class="sheet-handle" aria-hidden="true"></div>
     <div class="sheet-heading"><div><h2 id="sheetTitle">案件一覧</h2><p>時刻の直接入力と削除ができます</p></div><button id="closeSheetButton" class="close-button" type="button" aria-label="案件一覧を閉じる">×</button></div>
-    <label class="sheet-date">日付を切り替える <input id="dateInput" type="date" aria-label="案件の日付を切り替える"></label>
     <div id="jobList" class="sheet-list"></div>
     <button id="sheetAddButton" class="sheet-add" type="button">＋ 時間軸で案件を追加</button>
   </dialog>
 
   <dialog id="settingsDialog" class="confirm-dialog settings-dialog" aria-labelledby="settingsTitle">
     <div class="sheet-heading"><h2 id="settingsTitle">休憩案の設定</h2><button id="closeSettingsButton" class="close-button" type="button" aria-label="設定を閉じる">×</button></div>
+    <label class="sheet-date">日付を切り替える <input id="dateInput" type="date" aria-label="案件の日付を切り替える"></label>
     <label class="setting-field" for="minBreakSelect">1回あたりの最短時間</label>
     <select id="minBreakSelect" aria-label="1回あたりの最短時間">
       <option value="10">10分</option><option value="15">15分</option><option value="20">20分</option>
@@ -62,11 +62,6 @@
     <p>変更すると、保存済みの案件を使って休憩案を再計算します。</p>
   </dialog>
 
-  <dialog id="resetDialog" class="confirm-dialog" aria-labelledby="resetTitle">
-    <h2 id="resetTitle">この日の案件をリセットしますか？</h2>
-    <p>この日の案件と休憩結果を消します。他の日付の保存データには影響しません。実行後は「元に戻す」で復元できます。</p>
-    <div class="confirm-actions"><button id="cancelResetButton" type="button">キャンセル</button><button id="confirmResetButton" type="button">リセットする</button></div>
-  </dialog>
   <script type="module" src="./app.js"></script>
 </body>
 </html>

@@ -14,7 +14,6 @@ const refs = Object.fromEntries([
   'feedback', 'timeline', 'rulerLayer', 'timelineLane', 'breakLayer', 'jobLayer', 'timeLabelLayer',
   'ghostLayer', 'pointerGuide', 'guideTime', 'dragReadout',
   'jobsSheet', 'closeSheetButton', 'jobList', 'sheetAddButton',
-  'resetDialog', 'cancelResetButton', 'confirmResetButton',
 ].map((id) => [id, $(id)]));
 
 function localToday() {
@@ -189,7 +188,7 @@ function renderTimeline(result) {
     block.append(startHandle, name, time, endHandle);
     block.addEventListener('click', () => {
       if (Date.now() < state.suppressTapUntil || state.edit) return;
-      openSheet(job.id);
+      startAdjust(job.id);
     });
     refs.jobLayer.append(block);
     items.push({ block, start: job.start, end: job.end, kind: 'job' });
@@ -216,8 +215,19 @@ function renderSummary(result) {
   const confinementValue = document.createElement('strong'); confinementValue.textContent = fmtDuration(result.confinementMinutes);
   confinement.append(confinementLabel, confinementValue);
   const plan = document.createElement('div'); plan.className = 'summary-plan';
-  plan.textContent = result.status === 'valid' ? `休憩案 ${result.count}回 · 合計 ${result.totalMinutes}分` : '成立しません';
+  if (result.status === 'valid') {
+    const label = document.createElement('span'); label.textContent = `休憩案 ${result.count}回 · 合計`;
+    const total = document.createElement('strong'); total.textContent = `${Math.floor(result.totalMinutes / 60)}時間${result.totalMinutes % 60}分`;
+    plan.append(label, total);
+  } else plan.textContent = '成立しません';
   refs.summary.append(confinement, plan);
+  if (result.reasons?.length) {
+    const reasons = document.createElement('ul'); reasons.className = 'summary-reasons';
+    for (const reason of result.reasons) {
+      const item = document.createElement('li'); item.textContent = reason.message; reasons.append(item);
+    }
+    refs.summary.append(reasons);
+  }
 }
 function renderNotices() {
   const outside = state.jobs.filter((job) => !isOnAxis(job));
@@ -313,10 +323,6 @@ function renderSheet(result) {
       note.textContent = [...new Set(errors.map((error) => error.message))].join(' ');
       card.append(note);
     }
-    const actions = document.createElement('div'); actions.className = 'job-card-actions';
-    const edit = makeSheetButton('時間軸で編集', 'edit-on-axis', () => startAdjust(job.id));
-    edit.disabled = !isOnAxis(job);
-    actions.append(edit); card.append(actions);
     refs.jobList.append(card);
   });
 }
@@ -479,10 +485,8 @@ refs.undoButton.addEventListener('click', () => {
   state.edit = null; state.feedback = '';
   saveDay(); render();
 });
-refs.resetButton.addEventListener('click', () => { if (state.jobs.length) refs.resetDialog.showModal(); });
-refs.cancelResetButton.addEventListener('click', () => refs.resetDialog.close());
-refs.confirmResetButton.addEventListener('click', () => {
-  refs.resetDialog.close();
+refs.resetButton.addEventListener('click', () => {
+  if (!state.jobs.length) return;
   state.edit = null;
   state.drag = null;
   hideDragIndicators();
