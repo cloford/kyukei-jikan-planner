@@ -126,23 +126,31 @@ function placeTimeLabels(items) {
   const labels = [];
   let nextTop = 0;
   for (const item of compact) {
+    const height = item.kind === 'break' ? 34 : 18;
     const center = ((item.start + item.end) / 2 - MIN_TIME) * PX_PER_MINUTE;
-    const top = Math.max(nextTop, Math.round(center - 9));
-    labels.push({ item, top });
-    nextTop = top + 20;
+    const top = Math.max(nextTop, Math.round(center - height / 2));
+    labels.push({ item, top, height });
+    nextTop = top + height + 2;
   }
   const excess = Math.max(0, nextTop - 1560);
   if (excess) for (const label of labels) label.top -= excess;
-  for (const { item, top } of labels) {
+  for (const { item, top, height } of labels) {
     const pill = document.createElement('span');
     pill.className = `edge-time-label ${item.kind}`;
     pill.style.top = `${top}px`;
-    pill.textContent = `${fmt(item.start)}–${fmt(item.end)}`;
+    const time = document.createElement('span');
+    time.textContent = `${fmt(item.start)}–${fmt(item.end)}`;
+    pill.append(time);
+    if (item.kind === 'break') {
+      const duration = document.createElement('strong');
+      duration.textContent = fmtDuration(item.end - item.start);
+      pill.append(duration);
+    }
     refs.timeLabelLayer.append(pill);
     for (const other of items) {
       const barTop = (other.start - MIN_TIME) * PX_PER_MINUTE;
       const barBottom = (other.end - MIN_TIME) * PX_PER_MINUTE;
-      if (barTop < top + 19 && barBottom > top) other.block.classList.add('with-time-rail');
+      if (barTop < top + height && barBottom > top) other.block.classList.add('with-time-rail');
     }
   }
 }
@@ -155,10 +163,12 @@ function renderTimeline(result) {
       const start = Math.max(item.start, MIN_TIME), end = Math.min(item.end, MAX_TIME);
       if (end <= start) return;
       const block = makeBlock('break-block', start, end);
-      block.setAttribute('aria-label', `休憩${index + 1} ${fmt(item.start)}から${fmt(item.end)}`);
+      block.setAttribute('aria-label', `休憩${index + 1} ${fmt(item.start)}から${fmt(item.end)}、${fmtDuration(item.duration)}`);
       const label = document.createElement('span'); label.className = 'break-name'; label.textContent = `休憩${index + 1}`;
       const time = document.createElement('span'); time.className = 'break-time'; time.textContent = `${fmt(item.start)}–${fmt(item.end)}`;
-      block.append(label, time); refs.breakLayer.append(block);
+      const duration = document.createElement('span'); duration.className = 'break-duration'; duration.textContent = fmtDuration(item.duration);
+      const info = document.createElement('span'); info.className = 'break-info'; info.append(time, duration);
+      block.append(label, info); refs.breakLayer.append(block);
       if (end - start < 20) block.classList.add('compact-time');
       items.push({ block, start, end, kind: 'break' });
     });
