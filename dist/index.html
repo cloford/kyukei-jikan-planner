@@ -3,10 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f6f8f4">
+  <meta name="theme-color" content="#246b4c">
   <meta name="description" content="1日の案件間に取れる休憩時間を、スマートフォンの時間軸で算出します。">
   <title>休憩時間算出アプリ</title>
   <link rel="stylesheet" href="./style.css">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
 </head>
 <body>
   <main class="app-shell">
@@ -60,8 +63,13 @@
       <option value="25">25分</option><option value="30" selected>30分</option><option value="35">35分</option><option value="40">40分</option>
     </select>
     <p>変更すると、保存済みの案件を使って休憩案を再計算します。</p>
+    <div class="pwa-settings">
+      <span id="pwaStatus" role="status" aria-live="polite">オフライン利用を準備しています。</span>
+      <button id="checkUpdateButton" type="button">アプリの更新を確認</button>
+    </div>
   </dialog>
 
   <script type="module" src="./app.js"></script>
+  <script type="module" src="./pwa.js"></script>
 </body>
 </html>

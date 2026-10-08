@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "休憩時間算出アプリ",
+  "short_name": "休憩時間",
+  "description": "案件を時間軸で管理し、条件に合う休憩案を計算します。初回利用後はオフラインでも使えます。",
+  "lang": "ja",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f8f4",
+  "theme_color": "#246b4c",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

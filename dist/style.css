@@ -132,6 +132,8 @@ dialog::backdrop { background: #172c20a1; }
 .confirm-dialog h2 { font-size: 18px; margin: 0; }
 .confirm-dialog p { color: #637567; font-size: 13px; line-height: 1.65; margin: 11px 0 19px; }
 .settings-dialog .sheet-heading { align-items: center; }
+.pwa-settings { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid #dce7dc; color: #355540; font-size: 13px; line-height: 1.6; }
+.pwa-settings button { min-height: 42px; border: 1px solid #cdded0; border-radius: 9px; background: #f6faf5; color: #244832; font-size: 13px; font-weight: 800; }
 .settings-dialog .sheet-date { margin-top: 16px; }
 .setting-field { display: block; margin: 16px 0 7px; color: #3a5743; font-size: 13px; font-weight: 850; }
 .settings-dialog select { width: 100%; min-height: 46px; padding: 0 11px; border: 1px solid #cdded0; border-radius: 9px; background: #fff; color: #244832; font-size: 16px; font-weight: 850; }
