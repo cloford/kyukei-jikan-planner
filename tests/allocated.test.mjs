@@ -8,6 +8,34 @@ const minute = (time) => {
 };
 const jobs = (...ranges) => ranges.map(([start, end], index) => ({ id: String(index + 1), start: minute(start), end: minute(end) }));
 const shown = (result) => result.breaks.map((item) => [item.start, item.end, item.duration]);
+const reasons = (result) => result.reasons.map((item) => item.code);
+
+test('必要合計が最短時間未満でスキマもない場合は両方の理由を示す', () => {
+  assert.deepEqual(reasons(calculateAllocatedBreaks(jobs(['09:00', '17:00']))), ['below-minimum', 'no-gap']);
+});
+test('休憩0分でも長い日は5時間条件が必要な理由を示す', () => {
+  assert.ok(reasons(calculateAllocatedBreaks(jobs(['09:00', '16:00']))).includes('zero-total'));
+});
+test('最初の休憩が遅すぎる場合は容量不足と誤判定しない', () => {
+  assert.deepEqual(reasons(calculateAllocatedBreaks(jobs(['09:00', '14:00'], ['16:00', '18:00']))), ['first-deadline']);
+});
+test('3回分の容量では不足することを判定する', () => {
+  assert.deepEqual(reasons(calculateAllocatedBreaks(jobs(['09:00', '10:00'], ['11:00', '12:00'], ['13:00', '14:00'], ['15:00', '16:00'], ['17:00', '19:55']))), ['three-break-limit']);
+});
+test('全スキマを使っても必要合計に届かない', () => {
+  assert.deepEqual(reasons(calculateAllocatedBreaks(jobs(['09:00', '10:00'], ['11:00', '18:00']))), ['insufficient-capacity']);
+});
+test('容量があっても各回最短時間により正確に分割できない', () => {
+  assert.deepEqual(reasons(calculateAllocatedBreaks(jobs(['09:00', '10:00'], ['10:50', '12:00'], ['12:50', '17:45']))), ['exact-total']);
+});
+test('休憩間5時間の制約と合計配分の両立失敗を示す', () => {
+  assert.deepEqual(reasons(calculateAllocatedBreaks(jobs(['06:00', '07:00'], ['07:40', '13:00'], ['14:00', '15:00']))), ['spacing-allocation']);
+});
+test('設定を変えて成立した日は不成立理由を付けない', () => {
+  const ranges = jobs(['09:00', '10:00'], ['10:20', '14:25'], ['16:35', '18:00']);
+  assert.ok(reasons(calculateAllocatedBreaks(ranges, 30)).includes('first-deadline'));
+  assert.equal(calculateAllocatedBreaks(ranges, 10).reasons, undefined);
+});
 
 test('案件がない日は拘束時間を算出しない', () => {
   const result = calculateAllocatedBreaks([]);
