@@ -77,7 +77,10 @@ function isBetter(candidate, best) {
  * @param {Array<{id: string|number, name?: string, start: number, end: number}>} jobs
  * @returns {{status: 'valid'|'invalid'|'impossible', breaks: Array<{start:number,end:number,duration:number}>, totalMinutes:number, count:number, errors:Array}}
  */
-export function calculateBreaks(jobs) {
+export function calculateBreaks(jobs, minBreakMinutes = 30) {
+  if (!Number.isInteger(minBreakMinutes) || minBreakMinutes < 10 || minBreakMinutes > 40 || minBreakMinutes % 5 !== 0) {
+    throw new RangeError('1回あたりの最短時間は10〜40分の5分刻みで指定してください。');
+  }
   const validation = validateJobs(jobs);
   if (!validation.valid) return { status: 'invalid', breaks: [], totalMinutes: 0, count: 0, errors: validation.errors };
 
@@ -90,7 +93,7 @@ export function calculateBreaks(jobs) {
   for (let i = 1; i < ordered.length; i += 1) {
     const start = ordered[i - 1].end + 5;
     const end = ordered[i].start - 5;
-    if (end - start >= 10) {
+    if (end - start >= minBreakMinutes) {
       candidates.push({ start, end, duration: end - start });
     }
   }
@@ -132,22 +135,26 @@ export function calculateBreaks(jobs) {
  * The score gives later gaps higher priority than all earlier gaps combined.
  * For the same allocation, fewer breaks and later starts win.
  */
-export function calculateAllocatedBreaks(jobs) {
+export function calculateAllocatedBreaks(jobs, minBreakMinutes = 30) {
+  if (!Number.isInteger(minBreakMinutes) || minBreakMinutes < 10 || minBreakMinutes > 40 || minBreakMinutes % 5 !== 0) {
+    throw new RangeError('1回あたりの最短時間は10〜40分の5分刻みで指定してください。');
+  }
   const validation = validateJobs(jobs);
   if (!validation.valid) {
-    return { status: 'invalid', breaks: [], count: 0, totalMinutes: 0, actualMinutes: null, maxAvailableMinutes: null, errors: validation.errors };
+    return { status: 'invalid', breaks: [], count: 0, totalMinutes: 0, confinementMinutes: null, actualMinutes: null, maxAvailableMinutes: null, errors: validation.errors };
   }
   if (jobs.length === 0) {
-    return { status: 'empty', breaks: [], count: 0, totalMinutes: 0, actualMinutes: null, maxAvailableMinutes: null, errors: [] };
+    return { status: 'empty', breaks: [], count: 0, totalMinutes: 0, confinementMinutes: null, actualMinutes: null, maxAvailableMinutes: null, errors: [] };
   }
 
   const ordered = [...jobs].sort((a, b) => a.start - b.start || a.end - b.end);
   const firstStart = ordered[0].start;
   const lastEnd = ordered[ordered.length - 1].end;
-  const actualMinutes = Math.max(0, lastEnd + 5 - firstStart - 480);
-  const maximum = calculateBreaks(ordered);
+  const confinementMinutes = lastEnd + 5 - firstStart;
+  const actualMinutes = Math.max(0, confinementMinutes - 480);
+  const maximum = calculateBreaks(ordered, minBreakMinutes);
   const maxAvailableMinutes = maximum.status === 'valid' ? maximum.totalMinutes : null;
-  const base = { actualMinutes, maxAvailableMinutes, errors: [] };
+  const base = { confinementMinutes, actualMinutes, maxAvailableMinutes, errors: [] };
   const impossible = () => ({ status: 'impossible', breaks: [], count: 0, totalMinutes: 0, ...base });
 
   if (actualMinutes === 0) {
@@ -156,17 +163,18 @@ export function calculateAllocatedBreaks(jobs) {
     }
     return impossible();
   }
-  if (actualMinutes < 10 || maxAvailableMinutes === null || actualMinutes > maxAvailableMinutes) return impossible();
+  if (actualMinutes < minBreakMinutes || maxAvailableMinutes === null || actualMinutes > maxAvailableMinutes) return impossible();
 
   const gaps = [];
   for (let index = 1; index < ordered.length; index += 1) {
     const start = ordered[index - 1].end + 5;
     const end = ordered[index].start - 5;
-    if (end - start >= 10) gaps.push({ start: start / 5, end: end / 5 });
+    if (end - start >= minBreakMinutes) gaps.push({ start: start / 5, end: end / 5 });
   }
   if (gaps.length === 0) return impossible();
 
   const totalSlots = actualMinutes / 5;
+  const minSlots = minBreakMinutes / 5;
   const firstDeadline = (firstStart + 300) / 5;
   const lastGap = gaps[gaps.length - 1];
   const singleStart = Math.min(lastGap.end - totalSlots, firstDeadline);
@@ -180,13 +188,13 @@ export function calculateAllocatedBreaks(jobs) {
 
   const gapAtStart = new Int16Array(289).fill(-1);
   for (let index = 0; index < gaps.length; index += 1) {
-    for (let start = gaps[index].start; start <= gaps[index].end - 2; start += 1) {
+    for (let start = gaps[index].start; start <= gaps[index].end - minSlots; start += 1) {
       gapAtStart[start] = index;
     }
   }
   const baseScore = BigInt(totalSlots + 1);
   const weights = gaps.map((_, index) => baseScore ** BigInt(index));
-  const latestStart = gaps[gaps.length - 1].end - 2;
+  const latestStart = gaps[gaps.length - 1].end - minSlots;
   const memo = new Map();
 
   function better(a, b) {
@@ -206,7 +214,7 @@ export function calculateAllocatedBreaks(jobs) {
 
   function solve(previousEnd, remaining, slotsLeft) {
     if (remaining === 0) return { score: 0n, count: 0, breaks: [] };
-    if (slotsLeft === 0 || remaining < 2) return null;
+    if (slotsLeft === 0 || remaining < minSlots) return null;
     const key = `${previousEnd}:${remaining}:${slotsLeft}`;
     if (memo.has(key)) return memo.get(key);
     let best = null;
@@ -216,7 +224,7 @@ export function calculateAllocatedBreaks(jobs) {
       const gapIndex = gapAtStart[start];
       if (gapIndex < 0) continue;
       const maxLength = Math.min(remaining, gaps[gapIndex].end - start);
-      for (let length = 2; length <= maxLength; length += 1) {
+      for (let length = minSlots; length <= maxLength; length += 1) {
         const end = start + length;
         const tail = solve(end, remaining - length, slotsLeft - 1);
         if (!tail) continue;

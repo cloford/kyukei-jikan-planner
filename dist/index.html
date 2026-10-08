@@ -17,6 +17,7 @@
           <button id="jobsButton" class="action-button" type="button">案件一覧 <span id="jobCount" class="count-badge">0</span></button>
           <button id="undoButton" class="action-button" type="button" disabled>↶ 元に戻す</button>
           <button id="resetButton" class="action-button danger" type="button">リセット</button>
+          <button id="settingsButton" class="action-button settings-button" type="button" aria-label="休憩案の設定" title="休憩案の設定">⚙</button>
         </div>
       </div>
 
@@ -33,6 +34,7 @@
         <div id="timelineLane" class="timeline-lane" aria-label="案件と休憩を表示する時間軸">
           <div id="breakLayer" class="break-layer"></div>
           <div id="jobLayer" class="job-layer"></div>
+          <div id="timeLabelLayer" class="time-label-layer" aria-hidden="true"></div>
           <div id="ghostLayer" class="ghost-layer"></div>
           <div id="pointerGuide" class="pointer-guide" hidden><span id="guideTime"></span></div>
         </div>
@@ -48,6 +50,16 @@
     <label class="sheet-date">日付を切り替える <input id="dateInput" type="date" aria-label="案件の日付を切り替える"></label>
     <div id="jobList" class="sheet-list"></div>
     <button id="sheetAddButton" class="sheet-add" type="button">＋ 時間軸で案件を追加</button>
+  </dialog>
+
+  <dialog id="settingsDialog" class="confirm-dialog settings-dialog" aria-labelledby="settingsTitle">
+    <div class="sheet-heading"><h2 id="settingsTitle">休憩案の設定</h2><button id="closeSettingsButton" class="close-button" type="button" aria-label="設定を閉じる">×</button></div>
+    <label class="setting-field" for="minBreakSelect">1回あたりの最短時間</label>
+    <select id="minBreakSelect" aria-label="1回あたりの最短時間">
+      <option value="10">10分</option><option value="15">15分</option><option value="20">20分</option>
+      <option value="25">25分</option><option value="30" selected>30分</option><option value="35">35分</option><option value="40">40分</option>
+    </select>
+    <p>変更すると、保存済みの案件を使って休憩案を再計算します。</p>
   </dialog>
 
   <dialog id="resetDialog" class="confirm-dialog" aria-labelledby="resetTitle">

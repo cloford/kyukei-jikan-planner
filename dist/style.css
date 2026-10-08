@@ -20,15 +20,16 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .control-actions { display: flex; align-items: center; gap: 6px; }
 .control-actions > button { flex: 1; min-width: 0; }
 .control-actions > button:first-child { flex: 1.2; }
+.control-actions > .settings-button { flex: 0 0 38px; padding: 0; font-size: 19px; }
 .action-button { min-height: 42px; padding: 0 5px; border: 1px solid #d7e3d8; border-radius: 10px; background: #f9fbf8; color: #345841; font-size: 11.5px; font-weight: 850; white-space: nowrap; }
 .action-button.primary { background: #246b4c; border-color: #246b4c; color: white; }
 .action-button.danger { color: #974636; background: #fffafa; border-color: #eddbd5; }
 .count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; margin-left: 2px; padding: 0 3px; border-radius: 9px; background: #e3efe7; color: #245a40; font-size: 10px; line-height: 1; }
 .action-button:focus-visible, .job-block:focus-visible, .sheet-add:focus-visible { outline: 3px solid #7ab992; outline-offset: 2px; }
-.compact-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 14px; padding: 11px 13px; background: #f8fbf7; border-bottom: 1px solid #dfe9df; color: #284a37; }
+.compact-summary { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px 15px; padding: 10px 13px; background: #f8fbf7; border-bottom: 1px solid #dfe9df; color: #284a37; }
 .summary-stat { display: grid; gap: 2px; font-size: 11px; color: #667b69; font-weight: 800; }
 .summary-stat strong { color: #284a37; font-size: 18px; line-height: 1.2; }
-.summary-plan { grid-column: 1 / -1; margin-top: 4px; padding-top: 6px; border-top: 1px solid #e0e9df; color: #28533a; font-size: 12px; font-weight: 850; }
+.summary-plan { color: #28533a; font-size: 12px; font-weight: 850; }
 .compact-summary.invalid, .compact-summary.impossible { background: #fff7f3; color: #9a4634; }
 .compact-summary.invalid .summary-plan, .compact-summary.impossible .summary-plan { color: #9a4634; }
 .outside-notice { margin: 10px 12px 0; padding: 10px 12px; border: 1px solid #e8c891; border-radius: 9px; background: #fff8e8; color: #785926; font-size: 12px; font-weight: 750; line-height: 1.5; }
@@ -50,7 +51,8 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   background-color: #fbfdf9;
 }
 .timeline-lane.is-editing { touch-action: none; background-color: #f6fbf3; cursor: crosshair; }
-.break-layer, .job-layer, .ghost-layer { position: absolute; inset: 0; pointer-events: none; }
+.break-layer, .job-layer, .ghost-layer, .time-label-layer { position: absolute; inset: 0; pointer-events: none; }
+.time-label-layer { z-index: 6; }
 .time-item { position: absolute; left: 8px; right: 8px; border-radius: 8px; }
 .job-block {
   z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 5px;
@@ -61,6 +63,11 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 }
 .job-block .job-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 850; }
 .job-block .job-time { flex: none; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.time-item.with-time-rail { right: 104px; width: calc(100% - 112px); }
+.time-item.compact-time .job-time, .time-item.compact-time .break-time { display: none; }
+.time-item.micro-time .job-name { display: none; }
+.edge-time-label { position: absolute; right: 6px; width: 92px; min-height: 18px; display: grid; place-items: center; border-radius: 5px; border: 1px solid #c6dccb; background: #fff; color: #24583e; font-size: 10px; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; box-shadow: 0 1px 3px #14392522; }
+.edge-time-label.break { border-color: #e3bd7d; background: #fff9ee; color: #765021; }
 .job-block.is-editing { background: #246d4d; border: 2px solid #174c34; z-index: 5; touch-action: none; }
 .job-block.is-dragging { opacity: .34; }
 .resize-handle { display: none; position: absolute; left: 50%; transform: translateX(-50%); width: 74px; height: 32px; align-items: center; justify-content: center; border-radius: 9px; background: #174c34; border: 2px solid white; box-shadow: 0 2px 7px #1b382a55; }
@@ -70,6 +77,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .job-block.is-editing .resize-handle { display: flex; }
 .break-block { z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 4px; overflow: hidden; padding: 1px 8px; background: #f4d59b; border: 1px solid #ddac61; color: #60451e; font-size: 11px; font-weight: 850; pointer-events: none; }
 .break-block span { white-space: nowrap; }
+.break-block .break-time { flex: none; font-size: 11px; font-variant-numeric: tabular-nums; }
 .ghost-block { z-index: 10; display: grid; place-items: center; padding: 2px 8px; border: 3px solid #1d6f48; background: #b3dfbcae; color: #175b3d; font-size: 12px; font-weight: 900; text-align: center; pointer-events: none; min-height: 16px; box-shadow: 0 2px 10px #1d6f4840; }
 .ghost-block::before, .ghost-block::after { content: ""; position: absolute; left: 10px; right: 10px; height: 5px; border-radius: 5px; background: #176b46; }
 .ghost-block::before { top: -3px; }
@@ -123,5 +131,8 @@ dialog::backdrop { background: #172c20a1; }
 .confirm-actions button { flex: 1; min-height: 43px; border-radius: 9px; font-size: 13px; font-weight: 850; }
 #cancelResetButton { border: 1px solid #dce7dc; background: #f8fbf8; color: #355540; }
 #confirmResetButton { border: 1px solid #a64736; background: #a64736; color: #fff; }
+.settings-dialog .sheet-heading { align-items: center; }
+.setting-field { display: block; margin: 16px 0 7px; color: #3a5743; font-size: 13px; font-weight: 850; }
+.settings-dialog select { width: 100%; min-height: 46px; padding: 0 11px; border: 1px solid #cdded0; border-radius: 9px; background: #fff; color: #244832; font-size: 16px; font-weight: 850; }
 @media (min-width: 760px) { .app-shell { padding: 20px 18px 45px; } .planner { border: 1px solid #e4ebe2; border-radius: 16px; overflow: clip; } .control-strip { border-radius: 16px 16px 0 0; } }
 @media (max-width: 390px) { .app-shell { padding: 0; } .hour-row .hour-label { font-size: 14px; } .half-row .hour-label { font-size: 12px; } .action-button { padding: 0 4px; font-size: 11px; } }

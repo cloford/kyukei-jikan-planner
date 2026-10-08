@@ -5,11 +5,13 @@ const MAX_TIME = 21 * 60;
 const PX_PER_MINUTE = 104 / 60;
 const AXIS_PADDING = 24;
 const STORAGE_PREFIX = 'break-planner-v1:';
+const MIN_BREAK_STORAGE_KEY = 'break-planner:min-break-minutes';
 const $ = (id) => document.getElementById(id);
 const refs = Object.fromEntries([
   'dateInput', 'jobsButton', 'jobCount', 'addButton', 'undoButton', 'resetButton',
+  'settingsButton', 'settingsDialog', 'closeSettingsButton', 'minBreakSelect',
   'summary', 'outsideNotice', 'editBanner', 'editInstruction', 'cancelEditButton',
-  'feedback', 'timeline', 'rulerLayer', 'timelineLane', 'breakLayer', 'jobLayer',
+  'feedback', 'timeline', 'rulerLayer', 'timelineLane', 'breakLayer', 'jobLayer', 'timeLabelLayer',
   'ghostLayer', 'pointerGuide', 'guideTime', 'dragReadout',
   'jobsSheet', 'closeSheetButton', 'jobList', 'sheetAddButton',
   'resetDialog', 'cancelResetButton', 'confirmResetButton',
@@ -33,7 +35,16 @@ function parseTime(value) {
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 const snap = (value) => clamp(Math.round(value / 5) * 5, MIN_TIME, MAX_TIME);
 const copyJobs = (jobs) => jobs.map((job) => ({ ...job }));
-const state = { date: localToday(), jobs: [], undo: [], edit: null, drag: null, feedback: '', suppressTapUntil: 0 };
+function loadMinBreakMinutes() {
+  try {
+    const value = Number(localStorage.getItem(MIN_BREAK_STORAGE_KEY));
+    return Number.isInteger(value) && value >= 10 && value <= 40 && value % 5 === 0 ? value : 30;
+  } catch { return 30; }
+}
+function fmtDuration(minutes) {
+  return minutes >= 60 ? `${Math.floor(minutes / 60)}時間${minutes % 60}分` : `${minutes}分`;
+}
+const state = { date: localToday(), jobs: [], undo: [], edit: null, drag: null, feedback: '', suppressTapUntil: 0, minBreakMinutes: loadMinBreakMinutes() };
 
 function loadDay(date) {
   try {
@@ -108,17 +119,48 @@ function makeBlock(className, start, end) {
   if (block.tagName === 'BUTTON') block.type = 'button';
   return block;
 }
+function placeTimeLabels(items) {
+  refs.timeLabelLayer.replaceChildren();
+  const compact = items.filter((item) => item.end - item.start < 20)
+    .sort((a, b) => a.start - b.start);
+  const labels = [];
+  let nextTop = 0;
+  for (const item of compact) {
+    const center = ((item.start + item.end) / 2 - MIN_TIME) * PX_PER_MINUTE;
+    const top = Math.max(nextTop, Math.round(center - 9));
+    labels.push({ item, top });
+    nextTop = top + 20;
+  }
+  const excess = Math.max(0, nextTop - 1560);
+  if (excess) for (const label of labels) label.top -= excess;
+  for (const { item, top } of labels) {
+    const pill = document.createElement('span');
+    pill.className = `edge-time-label ${item.kind}`;
+    pill.style.top = `${top}px`;
+    pill.textContent = `${fmt(item.start)}–${fmt(item.end)}`;
+    refs.timeLabelLayer.append(pill);
+    for (const other of items) {
+      const barTop = (other.start - MIN_TIME) * PX_PER_MINUTE;
+      const barBottom = (other.end - MIN_TIME) * PX_PER_MINUTE;
+      if (barTop < top + 19 && barBottom > top) other.block.classList.add('with-time-rail');
+    }
+  }
+}
 function renderTimeline(result) {
-  refs.breakLayer.replaceChildren(); refs.jobLayer.replaceChildren(); refs.ghostLayer.replaceChildren();
+  refs.breakLayer.replaceChildren(); refs.jobLayer.replaceChildren(); refs.timeLabelLayer.replaceChildren(); refs.ghostLayer.replaceChildren();
   refs.timelineLane.classList.toggle('is-editing', !!state.edit);
+  const items = [];
   if (!state.drag && result.status === 'valid') {
     result.breaks.forEach((item, index) => {
       const start = Math.max(item.start, MIN_TIME), end = Math.min(item.end, MAX_TIME);
       if (end <= start) return;
       const block = makeBlock('break-block', start, end);
-      const label = document.createElement('span'); label.textContent = `休憩${index + 1} ${fmt(item.start)}–${fmt(item.end)}`;
-      const duration = document.createElement('span'); duration.textContent = `${item.duration}分`;
-      block.append(label, duration); refs.breakLayer.append(block);
+      block.setAttribute('aria-label', `休憩${index + 1} ${fmt(item.start)}から${fmt(item.end)}`);
+      const label = document.createElement('span'); label.className = 'break-name'; label.textContent = `休憩${index + 1}`;
+      const time = document.createElement('span'); time.className = 'break-time'; time.textContent = `${fmt(item.start)}–${fmt(item.end)}`;
+      block.append(label, time); refs.breakLayer.append(block);
+      if (end - start < 20) block.classList.add('compact-time');
+      items.push({ block, start, end, kind: 'break' });
     });
   }
   sortedJobs().forEach((job, index) => {
@@ -130,6 +172,8 @@ function renderTimeline(result) {
     if (state.drag?.id === job.id) block.classList.add('is-dragging');
     const name = document.createElement('span'); name.className = 'job-name'; name.textContent = job.name || `案件${index + 1}`;
     const time = document.createElement('span'); time.className = 'job-time'; time.textContent = `${fmt(job.start)}–${fmt(job.end)}`;
+    if (job.end - job.start < 20) block.classList.add('compact-time');
+    if (job.end - job.start < 10) block.classList.add('micro-time');
     const startHandle = document.createElement('span'); startHandle.className = 'resize-handle start'; startHandle.dataset.handle = 'start'; startHandle.setAttribute('aria-hidden', 'true');
     const endHandle = document.createElement('span'); endHandle.className = 'resize-handle end'; endHandle.dataset.handle = 'end'; endHandle.setAttribute('aria-hidden', 'true');
     block.append(startHandle, name, time, endHandle);
@@ -138,7 +182,9 @@ function renderTimeline(result) {
       openSheet(job.id);
     });
     refs.jobLayer.append(block);
+    items.push({ block, start: job.start, end: job.end, kind: 'job' });
   });
+  placeTimeLabels(items);
 }
 function renderSummary(result) {
   refs.summary.className = 'compact-summary';
@@ -155,17 +201,13 @@ function renderSummary(result) {
     return;
   }
   if (result.status === 'impossible') refs.summary.classList.add('impossible');
-  const actual = document.createElement('div'); actual.className = 'summary-stat';
-  const actualLabel = document.createElement('span'); actualLabel.textContent = '実際の休憩時間';
-  const actualValue = document.createElement('strong'); actualValue.textContent = `${result.actualMinutes}分`;
-  actual.append(actualLabel, actualValue);
-  const maximum = document.createElement('div'); maximum.className = 'summary-stat';
-  const maximumLabel = document.createElement('span'); maximumLabel.textContent = '取れる最大時間';
-  const maximumValue = document.createElement('strong'); maximumValue.textContent = result.maxAvailableMinutes === null ? '—' : `${result.maxAvailableMinutes}分`;
-  maximum.append(maximumLabel, maximumValue);
+  const confinement = document.createElement('div'); confinement.className = 'summary-stat';
+  const confinementLabel = document.createElement('span'); confinementLabel.textContent = '拘束時間';
+  const confinementValue = document.createElement('strong'); confinementValue.textContent = fmtDuration(result.confinementMinutes);
+  confinement.append(confinementLabel, confinementValue);
   const plan = document.createElement('div'); plan.className = 'summary-plan';
   plan.textContent = result.status === 'valid' ? `休憩案 ${result.count}回 · 合計 ${result.totalMinutes}分` : '成立しません';
-  refs.summary.append(actual, maximum, plan);
+  refs.summary.append(confinement, plan);
 }
 function renderNotices() {
   const outside = state.jobs.filter((job) => !isOnAxis(job));
@@ -190,7 +232,7 @@ function renderNotices() {
   refs.jobCount.textContent = String(state.jobs.length);
 }
 function render() {
-  const result = calculateAllocatedBreaks(state.jobs);
+  const result = calculateAllocatedBreaks(state.jobs, state.minBreakMinutes);
   renderSummary(result);
   renderTimeline(result);
   renderNotices();
@@ -198,7 +240,7 @@ function render() {
 }
 
 function openSheet(focusId = null) {
-  renderSheet(calculateAllocatedBreaks(state.jobs));
+  renderSheet(calculateAllocatedBreaks(state.jobs, state.minBreakMinutes));
   if (!refs.jobsSheet.open) refs.jobsSheet.showModal();
   if (focusId) {
     const card = [...refs.jobList.querySelectorAll('.job-card')].find((element) => element.dataset.id === focusId);
@@ -408,6 +450,17 @@ refs.addButton.addEventListener('click', startCreate);
 refs.sheetAddButton.addEventListener('click', startCreate);
 refs.cancelEditButton.addEventListener('click', finishEdit);
 refs.jobsButton.addEventListener('click', () => openSheet());
+refs.settingsButton.addEventListener('click', () => refs.settingsDialog.showModal());
+refs.closeSettingsButton.addEventListener('click', () => refs.settingsDialog.close());
+refs.settingsDialog.addEventListener('click', (event) => { if (event.target === refs.settingsDialog) refs.settingsDialog.close(); });
+refs.minBreakSelect.addEventListener('change', () => {
+  const value = Number(refs.minBreakSelect.value);
+  if (!Number.isInteger(value) || value < 10 || value > 40 || value % 5 !== 0) return;
+  state.minBreakMinutes = value;
+  try { localStorage.setItem(MIN_BREAK_STORAGE_KEY, String(value)); }
+  catch { setFeedback('このブラウザでは設定を保存できません。'); }
+  render();
+});
 refs.closeSheetButton.addEventListener('click', () => refs.jobsSheet.close());
 refs.jobsSheet.addEventListener('click', (event) => { if (event.target === refs.jobsSheet) refs.jobsSheet.close(); });
 refs.undoButton.addEventListener('click', () => {
@@ -435,6 +488,7 @@ refs.dateInput.addEventListener('change', () => {
   render();
 });
 refs.dateInput.value = state.date;
+refs.minBreakSelect.value = String(state.minBreakMinutes);
 state.jobs = loadDay(state.date);
 renderRuler();
 render();
